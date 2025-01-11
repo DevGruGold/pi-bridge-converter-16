@@ -1,6 +1,6 @@
 import { createWeb3Modal, defaultWagmiConfig } from '@web3modal/wagmi';
 import { WagmiConfig } from 'wagmi';
-import { arbitrum, mainnet } from 'wagmi/chains';
+import { arbitrum, mainnet } from 'viem/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import router from './router';
@@ -15,9 +15,18 @@ const metadata = {
 };
 
 const chains = [mainnet, arbitrum];
-const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata });
+const wagmiConfig = defaultWagmiConfig({
+  chains,
+  projectId,
+  metadata,
+});
 
-createWeb3Modal({ wagmiConfig, projectId, chains });
+// Initialize web3modal
+createWeb3Modal({
+  wagmiConfig,
+  projectId,
+  chains,
+});
 
 const queryClient = new QueryClient();
 
