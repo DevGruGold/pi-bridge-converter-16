@@ -2,11 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp, Wallet, ExternalLink, Info, Settings, CreditCard } from 'lucide-react';
 
+interface FiatAsset {
+  code: string;
+  name: string;
+  rate: number;
+  type: 'fiat';
+}
+
+interface CryptoAsset {
+  code: string;
+  name: string;
+  price: number;
+  network: string;
+  fee: number;
+  isNew?: boolean;
+  type: 'crypto';
+}
+
+type Asset = FiatAsset | CryptoAsset;
+
 const BridgeConverter = () => {
   // Core state
   const [amount, setAmount] = useState('100');
   const [outputAmount, setOutputAmount] = useState('0');
-  const [fromType, setFromType] = useState('fiat');
+  const [fromType, setFromType] = useState<'fiat' | 'crypto'>('fiat');
   const [selectedFromAsset, setSelectedFromAsset] = useState('USD');
   const [selectedToAsset, setSelectedToAsset] = useState('PI');
   const [walletAddress, setWalletAddress] = useState('');
@@ -17,21 +36,29 @@ const BridgeConverter = () => {
   // Asset definitions with current market rates
   const assets = {
     fiat: [
-      { code: 'USD', name: 'US Dollar', rate: 1 },
-      { code: 'EUR', name: 'Euro', rate: 0.92 },
-      { code: 'GBP', name: 'British Pound', rate: 0.79 }
+      { code: 'USD', name: 'US Dollar', rate: 1, type: 'fiat' as const },
+      { code: 'EUR', name: 'Euro', rate: 0.92, type: 'fiat' as const },
+      { code: 'GBP', name: 'British Pound', rate: 0.79, type: 'fiat' as const }
     ],
     crypto: [
-      { code: 'BTC', name: 'Bitcoin', price: 100000, network: 'Bitcoin', fee: 0.0001 },
-      { code: 'ETH', name: 'Ethereum', price: 5420, network: 'Ethereum', fee: 0.0015 },
-      { code: 'PI', name: 'Pi', price: 50, network: 'Pi', fee: 0.001, isNew: true },
-      { code: 'XMR', name: 'Monero', price: 720, network: 'Monero', fee: 0.01 },
-      { code: 'XMRT', name: 'XMRT', price: 0.85, network: 'XMRT', fee: 0.002, isNew: true },
-      { code: 'BNB', name: 'BNB', price: 855, network: 'BSC', fee: 0.0005 },
-      { code: 'SOL', name: 'Solana', price: 275, network: 'Solana', fee: 0.0001 },
-      { code: 'USDT', name: 'USDT', price: 1.0001, network: 'Ethereum', fee: 0.0015 },
-      { code: 'USDC', name: 'USDC', price: 1, network: 'Ethereum', fee: 0.0015 }
+      { code: 'BTC', name: 'Bitcoin', price: 100000, network: 'Bitcoin', fee: 0.0001, type: 'crypto' as const },
+      { code: 'ETH', name: 'Ethereum', price: 5420, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const },
+      { code: 'PI', name: 'Pi', price: 50, network: 'Pi', fee: 0.001, isNew: true, type: 'crypto' as const },
+      { code: 'XMR', name: 'Monero', price: 720, network: 'Monero', fee: 0.01, type: 'crypto' as const },
+      { code: 'XMRT', name: 'XMRT', price: 0.85, network: 'XMRT', fee: 0.002, isNew: true, type: 'crypto' as const },
+      { code: 'BNB', name: 'BNB', price: 855, network: 'BSC', fee: 0.0005, type: 'crypto' as const },
+      { code: 'SOL', name: 'Solana', price: 275, network: 'Solana', fee: 0.0001, type: 'crypto' as const },
+      { code: 'USDT', name: 'USDT', price: 1.0001, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const },
+      { code: 'USDC', name: 'USDC', price: 1, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const }
     ]
+  };
+
+  const isCryptoAsset = (asset: Asset): asset is CryptoAsset => {
+    return asset.type === 'crypto';
+  };
+
+  const isFiatAsset = (asset: Asset): asset is FiatAsset => {
+    return asset.type === 'fiat';
   };
 
   // Calculate conversion
@@ -42,11 +69,15 @@ const BridgeConverter = () => {
     if (fromType === 'fiat') {
       const fromAsset = assets.fiat.find(a => a.code === selectedFromAsset);
       const toAsset = assets.crypto.find(a => a.code === selectedToAsset);
-      outputValue = (inputValue / fromAsset.rate) / toAsset.price;
+      if (fromAsset && toAsset) {
+        outputValue = (inputValue / fromAsset.rate) / toAsset.price;
+      }
     } else {
       const fromAsset = assets.crypto.find(a => a.code === selectedFromAsset);
       const toAsset = assets.crypto.find(a => a.code === selectedToAsset);
-      outputValue = (inputValue * fromAsset.price) / toAsset.price;
+      if (fromAsset && toAsset) {
+        outputValue = (inputValue * fromAsset.price) / toAsset.price;
+      }
     }
 
     // Apply slippage
@@ -83,7 +114,7 @@ const BridgeConverter = () => {
     setIsConnecting(false);
   };
 
-  const getSelectedAsset = (type, code) => {
+  const getSelectedAsset = (type: 'fiat' | 'crypto', code: string): Asset | undefined => {
     return type === 'fiat' ? 
       assets.fiat.find(a => a.code === code) :
       assets.crypto.find(a => a.code === code);
@@ -91,10 +122,10 @@ const BridgeConverter = () => {
 
   const getNetworkFee = () => {
     const asset = assets.crypto.find(a => a.code === selectedToAsset);
-    return asset ? (asset.fee * asset.price).toFixed(3) : 0;
+    return asset ? (asset.fee * asset.price).toFixed(3) : '0';
   };
 
-  const formatPrice = (price) => {
+  const formatPrice = (price: number) => {
     if (price >= 1000) {
       return price.toLocaleString();
     } else if (price < 0.01) {
