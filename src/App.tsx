@@ -26,8 +26,8 @@ createWeb3Modal({
   projectId,
   themeMode: 'light',
   themeVariables: {
-    '--w3m-font-family': 'Roboto, sans-serif',
-    '--w3m-accent-color': '#7c3aed' // purple-600
+    fontFamily: 'Roboto, sans-serif',
+    '--w3m-accent': '#7c3aed' // purple-600
   }
 });
 
