@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp, Wallet, ExternalLink, Info, Settings, CreditCard } from 'lucide-react';
 import { useWeb3Modal } from '@web3modal/react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useBalance, useNetwork, useFeeData } from 'wagmi';
+import { parseEther, formatEther } from 'viem';
+import { useToast } from "@/components/ui/use-toast";
 
 interface FiatAsset {
   code: string;
@@ -71,10 +73,12 @@ const translations = {
 };
 
 const BridgeConverter = () => {
-  // Web3Modal integration
   const { open } = useWeb3Modal();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+  const { chain } = useNetwork();
+  const { data: feeData } = useFeeData();
+  const { toast } = useToast();
 
   // Core state
   const [amount, setAmount] = useState('100');
@@ -138,7 +142,77 @@ const BridgeConverter = () => {
     // Apply slippage
     outputValue *= (1 - parseFloat(slippage) / 100);
     setOutputAmount(outputValue.toFixed(6));
-  }, [amount, selectedFromAsset, selectedToAsset, fromType, slippage, assets]); // Added assets to dependencies
+  }, [amount, selectedFromAsset, selectedToAsset, fromType, slippage, assets]);
+
+  // Get wallet balance for selected crypto
+  const { data: walletBalance } = useBalance({
+    address: address,
+    token: selectedToAsset === 'ETH' ? undefined : '0x...' // Add token address when needed
+  });
+
+  // Calculate network fees based on current gas prices
+  const calculateNetworkFee = () => {
+    if (!feeData?.gasPrice) return '0';
+    const baseGasUnits = 21000; // Basic ETH transfer
+    const estimatedFee = parseFloat(formatEther(feeData.gasPrice * BigInt(baseGasUnits)));
+    return estimatedFee.toFixed(6);
+  };
+
+  // Validate transaction
+  const validateTransaction = () => {
+    if (fromType === 'crypto' && walletBalance) {
+      const inputValueBig = parseEther(amount);
+      if (inputValueBig > walletBalance.value) {
+        toast({
+          title: "Insufficient balance",
+          description: `You need ${amount} ${selectedFromAsset} but only have ${formatEther(walletBalance.value)}`,
+          variant: "destructive"
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Handle transaction
+  const handleTransaction = async () => {
+    if (!validateTransaction()) return;
+
+    try {
+      // For on-ramp (buying crypto)
+      if (fromType === 'fiat') {
+        toast({
+          title: "Processing purchase",
+          description: `Buying ${outputAmount} ${selectedToAsset} with ${amount} ${selectedFromAsset}`,
+        });
+        // Implement payment processor integration here
+      }
+      // For off-ramp (selling crypto)
+      else {
+        toast({
+          title: "Processing sale",
+          description: `Selling ${amount} ${selectedFromAsset} for ${outputAmount} ${selectedToAsset}`,
+        });
+        // Implement crypto transfer and fiat payout here
+      }
+    } catch (error) {
+      toast({
+        title: "Transaction failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Update getNetworkFee to use real gas prices
+  const getNetworkFee = () => {
+    const calculatedFee = calculateNetworkFee();
+    const asset = assets.crypto.find(a => a.code === selectedToAsset);
+    if (asset) {
+      return (parseFloat(calculatedFee) * asset.price).toFixed(3);
+    }
+    return calculatedFee;
+  };
 
   // Handlers
   const handleAmountChange = (e) => {
@@ -158,29 +232,6 @@ const BridgeConverter = () => {
     }
   };
 
-  const connectWallet = async () => {
-    setIsConnecting(true);
-    try {
-      if (window.Pi) {
-        // Pi Network authentication
-        const scopes = ['payments'];
-        const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
-        setWalletAddress(authResult.user.uid);
-      } else {
-        // Web3Modal for other wallets
-        await open();
-      }
-    } catch (error) {
-      console.error('Failed to connect wallet:', error);
-    }
-    setIsConnecting(false);
-  };
-
-  const onIncompletePaymentFound = (payment) => {
-    console.log('Incomplete payment found:', payment);
-    // Handle incomplete Pi payments
-  };
-
   // Update wallet address when Web3Modal connection changes
   useEffect(() => {
     if (isConnected && address) {
@@ -192,11 +243,6 @@ const BridgeConverter = () => {
     return type === 'fiat' ? 
       assets.fiat.find(a => a.code === code) :
       assets.crypto.find(a => a.code === code);
-  };
-
-  const getNetworkFee = () => {
-    const asset = assets.crypto.find(a => a.code === selectedToAsset);
-    return asset ? (asset.fee * asset.price).toFixed(3) : '0';
   };
 
   const formatPrice = (price: number) => {
@@ -372,7 +418,8 @@ const BridgeConverter = () => {
 
           {/* Action Button */}
           <button 
-            disabled={!walletAddress}
+            disabled={!walletAddress || parseFloat(amount) <= 0}
+            onClick={handleTransaction}
             className="w-full py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400"
           >
             {fromType === 'fiat' ? t.buy : t.transfer} {selectedToAsset}
