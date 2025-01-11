@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp, Wallet, ExternalLink, Info, Settings, CreditCard } from 'lucide-react';
+import { useWeb3Modal } from '@web3modal/react';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
 interface FiatAsset {
   code: string;
@@ -69,6 +71,11 @@ const translations = {
 };
 
 const BridgeConverter = () => {
+  // Web3Modal integration
+  const { open } = useWeb3Modal();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+
   // Core state
   const [amount, setAmount] = useState('100');
   const [outputAmount, setOutputAmount] = useState('0');
@@ -154,13 +161,32 @@ const BridgeConverter = () => {
   const connectWallet = async () => {
     setIsConnecting(true);
     try {
-      const projectId = "93d6f5f37345b4cf181b296567177797";
-      setWalletAddress('pi1234...5678');
+      if (window.Pi) {
+        // Pi Network authentication
+        const scopes = ['payments'];
+        const authResult = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
+        setWalletAddress(authResult.user.uid);
+      } else {
+        // Web3Modal for other wallets
+        await open();
+      }
     } catch (error) {
       console.error('Failed to connect wallet:', error);
     }
     setIsConnecting(false);
   };
+
+  const onIncompletePaymentFound = (payment) => {
+    console.log('Incomplete payment found:', payment);
+    // Handle incomplete Pi payments
+  };
+
+  // Update wallet address when Web3Modal connection changes
+  useEffect(() => {
+    if (isConnected && address) {
+      setWalletAddress(address);
+    }
+  }, [isConnected, address]);
 
   const getSelectedAsset = (type: 'fiat' | 'crypto', code: string): Asset | undefined => {
     return type === 'fiat' ? 
@@ -332,6 +358,14 @@ const BridgeConverter = () => {
               <div className="text-xs text-gray-600 flex items-center justify-between">
                 <span>{assets.crypto.find(a => a.code === selectedToAsset)?.network}</span>
                 <span className="font-mono">{walletAddress}</span>
+                {isConnected && (
+                  <button
+                    onClick={() => disconnect()}
+                    className="text-purple-600 hover:text-purple-700"
+                  >
+                    Disconnect
+                  </button>
+                )}
               </div>
             </div>
           )}
