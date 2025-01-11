@@ -135,6 +135,11 @@ const BridgeConverter = () => {
     }
   };
 
+  const getAssetPrice = (asset: Asset | undefined): number => {
+    if (!asset) return 0;
+    return isCryptoAsset(asset) ? asset.price : 0;
+  };
+
   return (
     <div className="w-full max-w-sm mx-auto space-y-2">
       <Card className="border-purple-100">
@@ -209,7 +214,7 @@ const BridgeConverter = () => {
             />
             {fromType === 'crypto' && (
               <div className="text-xs text-gray-500">
-                ≈ ${(parseFloat(amount) * getSelectedAsset('crypto', selectedFromAsset)?.price || 0).toFixed(2)}
+                ≈ ${(parseFloat(amount) * getAssetPrice(getSelectedAsset('crypto', selectedFromAsset))).toFixed(2)}
               </div>
             )}
           </div>
@@ -246,7 +251,7 @@ const BridgeConverter = () => {
                 {outputAmount} {selectedToAsset}
               </div>
               <div className="text-xs text-gray-500">
-                ≈ ${(parseFloat(outputAmount) * getSelectedAsset('crypto', selectedToAsset)?.price || 0).toFixed(2)}
+                ≈ ${(parseFloat(outputAmount) * getAssetPrice(getSelectedAsset('crypto', selectedToAsset))).toFixed(2)}
               </div>
             </div>
           </div>
@@ -300,7 +305,7 @@ const BridgeConverter = () => {
           <div className="text-xs text-gray-500 border-t pt-2">
             <div className="flex justify-between">
               <span>Tasa de Mercado Actual</span>
-              <span>1 {selectedToAsset} = ${formatPrice(getSelectedAsset('crypto', selectedToAsset)?.price)}</span>
+              <span>1 {selectedToAsset} = ${formatPrice(getAssetPrice(getSelectedAsset('crypto', selectedToAsset)))}</span>
             </div>
           </div>
 
