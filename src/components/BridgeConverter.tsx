@@ -21,6 +21,53 @@ interface CryptoAsset {
 
 type Asset = FiatAsset | CryptoAsset;
 
+type Language = 'es' | 'en';
+
+const translations = {
+  es: {
+    title: 'Pi Puente',
+    mainNet: 'Red Principal',
+    slippageTolerance: 'Tolerancia de Deslizamiento',
+    switchTo: 'Cambiar a',
+    crypto: 'Cripto',
+    fiat: 'Fiat',
+    connecting: 'Conectando...',
+    connectWallet: 'Conectar Billetera',
+    buy: 'Comprar',
+    transfer: 'Transferir',
+    networkFee: 'Comisión de Red',
+    processing: 'Procesamiento',
+    slippage: 'Deslizamiento',
+    currentMarketRate: 'Tasa de Mercado Actual',
+    securityNotice: 'Las transacciones requieren verificación KYC y están aseguradas por',
+    terms: 'Términos',
+    privacy: 'Privacidad',
+    support: 'Soporte',
+    language: 'Idioma',
+  },
+  en: {
+    title: 'Pi Bridge',
+    mainNet: 'Main Net',
+    slippageTolerance: 'Slippage Tolerance',
+    switchTo: 'Switch to',
+    crypto: 'Crypto',
+    fiat: 'Fiat',
+    connecting: 'Connecting...',
+    connectWallet: 'Connect Wallet',
+    buy: 'Buy',
+    transfer: 'Transfer',
+    networkFee: 'Network Fee',
+    processing: 'Processing',
+    slippage: 'Slippage',
+    currentMarketRate: 'Current Market Rate',
+    securityNotice: 'Transactions require KYC verification and are secured by',
+    terms: 'Terms',
+    privacy: 'Privacy',
+    support: 'Support',
+    language: 'Language',
+  }
+};
+
 const BridgeConverter = () => {
   // Core state
   const [amount, setAmount] = useState('100');
@@ -32,6 +79,7 @@ const BridgeConverter = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
+  const [language, setLanguage] = useState<Language>('es');
 
   // Asset definitions with current market rates
   const assets = {
@@ -140,6 +188,8 @@ const BridgeConverter = () => {
     return isCryptoAsset(asset) ? asset.price : 0;
   };
 
+  const t = translations[language];
+
   return (
     <div className="w-full max-w-sm mx-auto space-y-2">
       <Card className="border-purple-100">
@@ -147,9 +197,9 @@ const BridgeConverter = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-bold text-purple-600">Pi Puente</h2>
+              <h2 className="text-lg font-bold text-purple-600">{t.title}</h2>
               <span className="px-1.5 py-0.5 text-xs font-medium text-purple-600 bg-purple-100 rounded-full">
-                Red Principal
+                {t.mainNet}
               </span>
             </div>
             <button 
@@ -164,7 +214,7 @@ const BridgeConverter = () => {
           {showSettings && (
             <div className="p-2 bg-gray-50 rounded-lg text-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Tolerancia de Deslizamiento</span>
+                <span className="text-gray-600">{t.slippageTolerance}</span>
                 <select
                   value={slippage}
                   onChange={(e) => setSlippage(e.target.value)}
@@ -173,6 +223,17 @@ const BridgeConverter = () => {
                   <option value="0.5">0.5%</option>
                   <option value="1.0">1.0%</option>
                   <option value="2.0">2.0%</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between border-t pt-2">
+                <span className="text-gray-600">{t.language}</span>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as Language)}
+                  className="bg-white border rounded px-2 py-1"
+                >
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
                 </select>
               </div>
             </div>
@@ -202,7 +263,7 @@ const BridgeConverter = () => {
                 onClick={switchFromType}
                 className="text-xs text-purple-600 hover:text-purple-700"
               >
-                Cambiar a {fromType === 'fiat' ? 'Cripto' : 'Fiat'}
+                {t.switchTo} {fromType === 'fiat' ? t.crypto : t.fiat}
               </button>
             </div>
             <input
@@ -264,7 +325,7 @@ const BridgeConverter = () => {
               className="w-full py-2 px-3 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
             >
               <Wallet className="w-4 h-4" />
-              <span>{isConnecting ? 'Conectando...' : 'Conectar Billetera'}</span>
+              <span>{isConnecting ? t.connecting : t.connectWallet}</span>
             </button>
           ) : (
             <div className="p-2 bg-purple-50/50 rounded-lg">
@@ -280,23 +341,23 @@ const BridgeConverter = () => {
             disabled={!walletAddress}
             className="w-full py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:bg-gray-400"
           >
-            {fromType === 'fiat' ? 'Comprar' : 'Transferir'} {selectedToAsset}
+            {fromType === 'fiat' ? t.buy : t.transfer} {selectedToAsset}
           </button>
 
           {/* Fees */}
           <div className="text-xs space-y-1">
             <div className="flex justify-between text-gray-600">
-              <span>Comisión de Red</span>
+              <span>{t.networkFee}</span>
               <span>${getNetworkFee()}</span>
             </div>
             {fromType === 'fiat' && (
               <div className="flex justify-between text-gray-600">
-                <span>Procesamiento</span>
+                <span>{t.processing}</span>
                 <span>1.5%</span>
               </div>
             )}
             <div className="flex justify-between text-gray-600">
-              <span>Deslizamiento</span>
+              <span>{t.slippage}</span>
               <span>{slippage}%</span>
             </div>
           </div>
@@ -304,7 +365,7 @@ const BridgeConverter = () => {
           {/* Market Rate */}
           <div className="text-xs text-gray-500 border-t pt-2">
             <div className="flex justify-between">
-              <span>Tasa de Mercado Actual</span>
+              <span>{t.currentMarketRate}</span>
               <span>1 {selectedToAsset} = ${formatPrice(getAssetPrice(getSelectedAsset('crypto', selectedToAsset)))}</span>
             </div>
           </div>
@@ -312,7 +373,7 @@ const BridgeConverter = () => {
           {/* Security Notice */}
           <div className="flex items-start space-x-1.5 text-xs text-gray-500">
             <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-            <p>Las transacciones requieren verificación KYC y están aseguradas por {assets.crypto.find(a => a.code === selectedToAsset)?.network}</p>
+            <p>{t.securityNotice} {assets.crypto.find(a => a.code === selectedToAsset)?.network}</p>
           </div>
         </CardContent>
       </Card>
@@ -320,11 +381,11 @@ const BridgeConverter = () => {
       {/* Footer */}
       <div className="text-center space-y-1 py-2">
         <div className="flex justify-center items-center space-x-3 text-xs text-gray-600">
-          <a href="#" className="hover:text-purple-600">Términos</a>
+          <a href="#" className="hover:text-purple-600">{t.terms}</a>
           <span>•</span>
-          <a href="#" className="hover:text-purple-600">Privacidad</a>
+          <a href="#" className="hover:text-purple-600">{t.privacy}</a>
           <span>•</span>
-          <a href="#" className="hover:text-purple-600">Soporte</a>
+          <a href="#" className="hover:text-purple-600">{t.support}</a>
         </div>
         <div className="text-[10px] text-gray-400">
           © 2024 Pi Network • v1.0.0
