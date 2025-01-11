@@ -116,7 +116,7 @@ const BridgeConverter = () => {
     return asset.type === 'fiat';
   };
 
-  // Calculate conversion
+  // Calculate conversion with proper dependency tracking
   useEffect(() => {
     const inputValue = parseFloat(amount) || 0;
     let outputValue = 0;
@@ -138,7 +138,7 @@ const BridgeConverter = () => {
     // Apply slippage
     outputValue *= (1 - parseFloat(slippage) / 100);
     setOutputAmount(outputValue.toFixed(6));
-  }, [amount, selectedFromAsset, selectedToAsset, fromType, slippage]);
+  }, [amount, selectedFromAsset, selectedToAsset, fromType, slippage, assets]); // Added assets to dependencies
 
   // Handlers
   const handleAmountChange = (e) => {
