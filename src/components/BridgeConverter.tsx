@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp, Wallet, ExternalLink, Info, Settings, CreditCard } from 'lucide-react';
 import { useWeb3Modal } from '@web3modal/react';
-import { useAccount, useConnect, useDisconnect, useBalance, useNetwork, useFeeData } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useBalance, useChainId, useFeeData } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import { useToast } from "@/components/ui/use-toast";
 
@@ -76,7 +76,7 @@ const BridgeConverter = () => {
   const { open } = useWeb3Modal();
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const { chain } = useNetwork();
+  const chainId = useChainId();
   const { data: feeData } = useFeeData();
   const { toast } = useToast();
 
@@ -118,6 +118,21 @@ const BridgeConverter = () => {
 
   const isFiatAsset = (asset: Asset): asset is FiatAsset => {
     return asset.type === 'fiat';
+  };
+
+  const connectWallet = async () => {
+    setIsConnecting(true);
+    try {
+      await open();
+    } catch (error) {
+      toast({
+        title: "Connection failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   // Calculate conversion with proper dependency tracking
