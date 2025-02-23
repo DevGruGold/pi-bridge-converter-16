@@ -91,6 +91,7 @@ const BridgeConverter = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
   const [language, setLanguage] = useState<Language>('es');
+  const [prices, setPrices] = useState<Record<string, number>>({});
 
   // Asset definitions with current market rates
   const assets = {
@@ -100,13 +101,13 @@ const BridgeConverter = () => {
       { code: 'GBP', name: 'British Pound', rate: 0.79, type: 'fiat' as const }
     ],
     crypto: [
-      { code: 'BTC', name: 'Bitcoin', price: 100000, network: 'Bitcoin', fee: 0.0001, type: 'crypto' as const },
-      { code: 'ETH', name: 'Ethereum', price: 5420, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const },
-      { code: 'PI', name: 'Pi', price: 50, network: 'Pi', fee: 0.001, isNew: true, type: 'crypto' as const },
-      { code: 'XMR', name: 'Monero', price: 720, network: 'Monero', fee: 0.01, type: 'crypto' as const },
+      { code: 'BTC', name: 'Bitcoin', price: prices.BTC || 100000, network: 'Bitcoin', fee: 0.0001, type: 'crypto' as const },
+      { code: 'ETH', name: 'Ethereum', price: prices.ETH || 5420, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const },
+      { code: 'PI', name: 'Pi', price: prices.PI || 1.50, network: 'Pi', fee: 0.001, isNew: true, type: 'crypto' as const },
+      { code: 'XMR', name: 'Monero', price: prices.XMR || 720, network: 'Monero', fee: 0.01, type: 'crypto' as const },
       { code: 'XMRT', name: 'XMRT', price: 0.85, network: 'XMRT', fee: 0.002, isNew: true, type: 'crypto' as const },
-      { code: 'BNB', name: 'BNB', price: 855, network: 'BSC', fee: 0.0005, type: 'crypto' as const },
-      { code: 'SOL', name: 'Solana', price: 275, network: 'Solana', fee: 0.0001, type: 'crypto' as const },
+      { code: 'BNB', name: 'BNB', price: prices.BNB || 855, network: 'BSC', fee: 0.0005, type: 'crypto' as const },
+      { code: 'SOL', name: 'Solana', price: prices.SOL || 275, network: 'Solana', fee: 0.0001, type: 'crypto' as const },
       { code: 'USDT', name: 'USDT', price: 1.0001, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const },
       { code: 'USDC', name: 'USDC', price: 1, network: 'Ethereum', fee: 0.0015, type: 'crypto' as const }
     ]
@@ -135,6 +136,37 @@ const BridgeConverter = () => {
     }
   };
 
+  // Fetch current prices from CryptoCompare API
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const symbols = ['BTC', 'ETH', 'PI', 'XMR', 'BNB', 'SOL'].join(',');
+        const response = await fetch(
+          `https://min-api.cryptocompare.com/data/pricemulti?fsyms=${symbols}&tsyms=USD`
+        );
+        const data = await response.json();
+        const newPrices: Record<string, number> = {};
+        
+        Object.entries(data).forEach(([symbol, price]: [string, any]) => {
+          newPrices[symbol] = price.USD;
+        });
+        
+        // For Pi, since it's new and might not be on CryptoCompare yet
+        newPrices['PI'] = 1.50; // Hardcoded current price until available on major APIs
+        
+        setPrices(newPrices);
+      } catch (error) {
+        console.error('Failed to fetch prices:', error);
+        // Fallback to existing prices
+      }
+    };
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Calculate conversion with proper dependency tracking
   useEffect(() => {
     const inputValue = parseFloat(amount) || 0;
@@ -157,7 +189,7 @@ const BridgeConverter = () => {
     // Apply slippage
     outputValue *= (1 - parseFloat(slippage) / 100);
     setOutputAmount(outputValue.toFixed(6));
-  }, [amount, selectedFromAsset, selectedToAsset, fromType, slippage, assets]);
+  }, [amount, selectedFromAsset, selectedToAsset, fromType, slippage, assets, prices]);
 
   // Get wallet balance for selected crypto
   const { data: walletBalance } = useBalance({
